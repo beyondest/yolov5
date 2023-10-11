@@ -6,7 +6,6 @@ import os
 import glob
 
 
-
 from pathlib import Path
 from ultralytics.utils.plotting import Annotator, colors, save_one_box
 from utils.augmentations import letterbox

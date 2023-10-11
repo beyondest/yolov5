@@ -1,0 +1,4 @@
+train: /content/yolov5/face/images/train
+val: /content/yolov5/face/images/val
+nc: 1
+names: ["face"]

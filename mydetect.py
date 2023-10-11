@@ -36,7 +36,8 @@ import sys
 from pathlib import Path
 import cv2
 import torch
-
+from numpy import array
+from numpy import round as npr
 
 
 FILE = Path(__file__).resolve()
@@ -131,12 +132,11 @@ def run(
         # Second-stage classifier (optional)
         # pred = utils.general.apply_classifier(pred, classifier_model, im, im0s)
 
-
         # Process predictions
         for i, det in enumerate(pred):  # per image
             seen += 1
             
-            
+
             p, im0, frame = path, im0s.copy(), getattr(dataset, 'frame', 0)
  
             p = Path(p)  # to Path
@@ -156,7 +156,10 @@ def run(
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
                 # Write results
+
                 for *xyxy, conf, cls in reversed(det):
+                    '''class 0 is human'''
+                    '''xyxy is '''
                     c = int(cls)  # integer class
                     label = names[c] if hide_conf else f'{names[c]}'
                     confidence = float(conf)
@@ -168,6 +171,14 @@ def run(
                         c = int(cls)  # integer class
                         label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
                         annotator.box_label(xyxy, label, color=colors(c, True))
+                    
+                    point0,point1=(int(xyxy[0]),int(xyxy[1])),(int(xyxy[2]),int(xyxy[3]))
+                    center_point=((point0[0]+point1[0])/2,(point0[1]+point1[1])/2)
+                    
+                    c=[0,0]
+                    c[0]=int(center_point[0])
+                    c[1]=int(center_point[1])
+                    cv2.circle(im0,c,10,(128,128,255),-1)
             cv2.imshow('imc',im0)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
@@ -177,7 +188,7 @@ def run(
             # Save results (image with detections)
   
         # Print time (inference-only)
-        LOGGER.info(f"{s}{'find mylove' if len(det) else '(no detections), '}{dt[1].dt * 1E3:.1f}ms")
+        LOGGER.info(f"{s}{f'find{len(det)}'  if len(det) else '(no detections), '},time{dt[1].dt * 1E3:.1f}ms")
 
     # Print results
     t = tuple(x.t / seen * 1E3 for x in dt)  # speeds per image
