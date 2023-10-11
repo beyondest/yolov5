@@ -36,6 +36,7 @@ import sys
 from pathlib import Path
 import cv2
 import torch
+import img_operation as imo
 from numpy import array
 from numpy import round as npr
 
@@ -56,7 +57,7 @@ from utils.torch_utils import select_device, smart_inference_mode
 from mydetect2 import myloadimgs
 
 @smart_inference_mode()
-def run(
+def myrun(
         weights=ROOT / 'yolov5s.pt',  # model path or triton URL
         source=ROOT / 'data/images',  # file/dir/URL/glob/screen/0(webcam)
         data=ROOT / 'data/coco128.yaml',  # dataset.yaml path
@@ -85,9 +86,12 @@ def run(
         half=False,  # use FP16 half-precision inference
         dnn=False,  # use OpenCV DNN for ONNX inference
         vid_stride=1,  # video frame-rate stride
-):
-    
-    save_img = 1
+        ):
+    '''return img ,rec_list,\n
+    img is drawed all recs,rec_list[0]=[point0,point1]'''
+
+    dia_list=[]
+    #save_img = 1
 
     # Directories
     save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
@@ -101,10 +105,6 @@ def run(
 
     # Dataloader
     bs = 1  # batch_size
-    
-
-    
-
     dataset = myloadimgs(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
 
     # Run inference
@@ -138,53 +138,36 @@ def run(
             
 
             p, im0, frame = path, im0s.copy(), getattr(dataset, 'frame', 0)
- 
             p = Path(p)  # to Path
-
             s += '%gx%g ' % im.shape[2:]  # print string
-            
             #gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  #normalization gain whwh
             annotator = Annotator(im0, line_width=line_thickness, example=str(names))
             #draw rec
             if len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0.shape).round()
-
                 # Print results
                 for c in det[:, 5].unique():
                     n = (det[:, 5] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
-
-                # Write results
-
                 for *xyxy, conf, cls in reversed(det):
                     '''class 0 is human'''
                     '''xyxy is '''
                     c = int(cls)  # integer class
                     label = names[c] if hide_conf else f'{names[c]}'
                     confidence = float(conf)
-                    confidence_str = f'{confidence:.2f}'
-
-
-
-                    if save_img or save_crop or view_img:  # Add bbox to image
+                    '''if save_img or save_crop or view_img:  # Add bbox to image
                         c = int(cls)  # integer class
                         label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
-                        annotator.box_label(xyxy, label, color=colors(c, True))
+                        annotator.box_label(xyxy, label, color=colors(c, True))'''
                     
                     point0,point1=(int(xyxy[0]),int(xyxy[1])),(int(xyxy[2]),int(xyxy[3]))
-                    center_point=((point0[0]+point1[0])/2,(point0[1]+point1[1])/2)
                     
-                    c=[0,0]
-                    c[0]=int(center_point[0])
-                    c[1]=int(center_point[1])
-                    cv2.circle(im0,c,10,(128,128,255),-1)
-            cv2.imshow('imc',im0)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
-
+                    dia_list.append([point0,point1])
+                    
+            
             im0 = annotator.result()
-
+            
             # Save results (image with detections)
   
         # Print time (inference-only)
@@ -196,19 +179,44 @@ def run(
 
     if update:
         strip_optimizer(weights[0])  # update model (to fix SourceChangeWarning)
-
+    return dia_list
 
 
 
 path='/home/liyuxuan/vscode/pywork_linux/others/yolov5/fordetect/people.jpg'
-img=cv2.imread(path)
+path_w='/home/liyuxuan/vscode/pywork_linux/others/yolov5/faceexp/exp2/weights/best.pt'
+
+ori_img=cv2.imread(path)
      
 
 
-def main():
-    check_requirements(ROOT / 'requirements.txt', exclude=('tensorboard', 'thop'))
-    run(source=img)
-main()
+
+#check_requirements(ROOT / 'requirements.txt', exclude=('tensorboard', 'thop'))
+dia_list=myrun(source=ori_img,weights=path_w)
+bigest_area=0
+recinfo_list=[]
+index=0
+
+#search biggest area rec
+for i in range(len(dia_list)):
+    
+    recinfo_list.append(imo.getdia_info(dia_list[i][0],dia_list[i][1]))
+    if bigest_area<recinfo_list[i][5]:
+        bigest_area=recinfo_list[i][5]
+        index=i
+
+final_center=[int(recinfo_list[index][0]),int(recinfo_list[index][1])]
+
+final_reccont=recinfo_list[index][4]
+img_copy=ori_img.copy()
+cv2.drawContours(img_copy,[final_reccont],-1,color=(128,128,255))
+cv2.circle(img_copy,final_center,10,(255,128,128),-1)
+cv2.imshow('final',img_copy)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+    
+    
+    
 
 
 

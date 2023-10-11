@@ -1353,3 +1353,17 @@ def auto_search(ori_img:np.ndarray)->tuple:
     auto_points=getrec_info(outer_conts[best_outer_num])[4]
     return auto_points,hand_points
 
+def getdia_info(pt0,pt1,angle=0):
+    '''input diagonal points of rec,\n
+    return recinfo'''
+    x0=pt0[0]
+    x1=pt1[0]
+    y0=pt0[1]
+    y1=pt1[1]
+    if angle==0:
+        pt2=[x0,y1]
+        pt3=[x1,y0]
+        c_x,c_y,w,h,rec_cont,rec_area=getrec_info(np.array([pt0,pt1,pt2,pt3]))
+        return c_x,c_y,w,h,rec_cont,rec_area
+    
+        
